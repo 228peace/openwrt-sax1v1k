@@ -175,7 +175,9 @@ case "$uboot_hash" in
   baf03dfc53dde25c54a351091ae48b84)
     uboot_label="1.5.9 [spf11.5_cs] Aug 19 2024 (untested)"
     uboot_hack="mw 4a912258 0a000007 1; mw 4a91f1c8 0a000006 1"
-    uboot_net_init="go 4a9679f0"
+    # Apparently this U-Boot version eagerly initializes the network, obviating the need for an explicit call.
+    #uboot_net_init="go 4a9679f0"
+    uboot_net_init=""
     break
     ;;
   *)
