@@ -140,35 +140,42 @@ echo
 
 local uboot_label
 local uboot_hack
+local uboot_net_init
 case "$uboot_hash" in
   f3066582267c857e24097b4aecd3e9a1)
     uboot_label="1.3.3 [spf11.1_csu2] Dec 09 2020 (variant f306)"
-    uboot_hack="mw 4a910cd0 0a000007 1; mw 4a91dc6c 0a000006 1; go 4a96433c"
+    uboot_hack="mw 4a910cd0 0a000007 1; mw 4a91dc6c 0a000006 1"
+    uboot_net_init="go 4a96433c"
     break
     ;;
   ab709449c98f89cfa57e119b0f37b388)
     uboot_label="1.3.3 [spf11.1_csu2] Jan 27 2021 (variant ab70)"
-    uboot_hack="mw 4a911044 0a000007 1; mw 4a91dfdc 0a000006 1; go 4a9647cc"
+    uboot_hack="mw 4a911044 0a000007 1; mw 4a91dfdc 0a000006 1"
+    uboot_net_init="go 4a9647cc"
     break
     ;;
   d75be109e242ee8923cb45f1cb082f83)
     uboot_label="1.3.3 [spf11.1_csu2] Apr 22 2021 (variant d75b, untested)"
-    uboot_hack="mw 4a910f88 0a000007 1; mw 4a91df24 0a000006 1; go 4a964714"
+    uboot_hack="mw 4a910f88 0a000007 1; mw 4a91df24 0a000006 1"
+    uboot_net_init="go 4a964714"
     break
     ;;
   7bc2f7766b270ea120495334cd1e5c56)
     uboot_label="1.5.0 [spf11.4_csu1] Feb 24 2022 (untested)"
-    uboot_hack="mw 4a9115a8 0a000007 1; mw 4a91e514 0a000006 1; go 4a966ba4"
+    uboot_hack="mw 4a9115a8 0a000007 1; mw 4a91e514 0a000006 1"
+    uboot_net_init="go 4a966ba4"
     break
     ;;
   85ae38d2a62b124f431ba5baba6b42ad)
     uboot_label="1.5.1 [spf11.4_csu2] Jun 15 2022"
-    uboot_hack="mw 4a9115c8 0a000007 1; mw 4a91e534 0a000006 1; go 4a966bc4"
+    uboot_hack="mw 4a9115c8 0a000007 1; mw 4a91e534 0a000006 1"
+    uboot_net_init="go 4a966bc4"
     break
     ;;
   baf03dfc53dde25c54a351091ae48b84)
     uboot_label="1.5.9 [spf11.5_cs] Aug 19 2024 (untested)"
-    uboot_hack="mw 4a912258 0a000007 1; mw 4a91f1c8 0a000006 1; go 4a9679f0"
+    uboot_hack="mw 4a912258 0a000007 1; mw 4a91f1c8 0a000006 1"
+    uboot_net_init="go 4a9679f0"
     break
     ;;
   *)
@@ -262,12 +269,12 @@ fw_setenv boot_recovery 'run boot_set_type_initramfs; run boot_hack; mmc read 44
 
 ### Boot from TFTP server
 
-fw_setenv boot_tftp 'run boot_set_type_initramfs; run boot_set_ip; run boot_hack; echo; echo "## Info: waiting for network..."; sleep 5 || exit; tftpboot recovery.img && bootm'
+fw_setenv boot_tftp 'run boot_set_type_initramfs; run boot_set_ip; run boot_hack; run boot_net_init; tftpboot recovery.img && bootm'
 
 ### Write recovery OS partition from TFTP server
 
 # Sector 0x4F9E22 is the start of mmcblk0p36 'rsvd_5' (contains the recovery OS and the boot interrupt flag in its last sector):
-fw_setenv boot_write_recovery_from_tftp 'run boot_set_type_initramfs; run boot_set_ip; run boot_hack; sleep 5 || exit; tftpboot recovery.img || exit; echo; echo "WILL WRITE RECOVERY IN 30s..."; sleep 30 || exit; mmc write 44000000 0x4F9E22 0x10000'
+fw_setenv boot_write_recovery_from_tftp 'run boot_set_type_initramfs; run boot_set_ip; run boot_hack; run boot_net_init; tftpboot recovery.img || exit; echo; echo "WILL WRITE RECOVERY IN 30s..."; sleep 30 || exit; mmc write 44000000 0x4F9E22 0x10000'
 
 
 ## Shared auxiliary functions
@@ -286,6 +293,12 @@ fw_setenv boot_dual_slot_support '2'
 ## U-Boot hack (WARNING: depends on U-Boot version!)
 
 fw_setenv boot_hack "$uboot_hack"
+
+if [[ "$uboot_net_init" != "" ]]; then
+  fw_setenv boot_net_init 'if test "$NET_INIT" != "1"; then '"$uboot_net_init"'; NET_INIT=1; echo; echo "## Info: waiting for network..."; sleep 5 || exit; fi'
+else
+  fw_setenv boot_net_init '#nop'
+fi
 
 
 echo "success"
