@@ -244,7 +244,7 @@ fw_setenv boot_stage5 'echo "## Info: booting via TFTP..."; sleep 1 || exit; run
 
 ### Boot main OS
 
-fw_setenv boot_main 'if "$boot_active_slot" == "1"; then SLOT=1; else SLOT=0; fi; run boot_slot'
+fw_setenv boot_main 'if test "$boot_active_slot" = "1"; then SLOT=1; else SLOT=0; fi; run boot_slot'
 
 fw_setenv boot_slot 'run boot_set_slot_$SLOT || exit; run boot_set_type_squashfs; run boot_hack; mmc read 44000000 "$KERNEL" 0x4000 && bootm'
 # Sector 0x8A22 is the start of mmcblk0p18 'HLOS' (contains the slot 0 kernel):
@@ -280,7 +280,7 @@ fw_setenv boot_set_type_squashfs 'setenv loadaddr 44000000; setenv bootargs cons
 
 ## Signal dual firmware slot support
 
-fw_setenv boot_dual_slot_support '1'
+fw_setenv boot_dual_slot_support '2'
 
 
 ## U-Boot hack (WARNING: depends on U-Boot version!)
