@@ -23,6 +23,10 @@ This script builds upon prior scripts by:
 
 ## The U-Boot Configuration Script
 
+The repository provides two variants of the configuration script:
+1. `configure-uboot.sh` - The original static script with GPT hash locking.
+2. `configure-uboot-dynamic.sh` - **Recommended for non-secure boot / repartitioned devices**. Features dynamic partition sector resolution, POSIX `ash` compatibility, and auto dual-slot recovery. See `DYNAMIC_UBOOT_GUIDE.md` and `SKILL.md`.
+
 The script is intended to be run:
 - under stock firmware during initial installation of OpenWrt (untested by me, but should work)
 - under official OpenWrt firmware to upgrade the U-Boot configuration (tested)
@@ -52,7 +56,8 @@ The applied U-Boot configuration includes a loader script that behaves as follow
   - an OS image provided via TFTP
 - Lets you force a recovery OS boot (or TFTP boot if that fails) at any time without serial access.
 
-The loader script now supports dual firmware slots, complete with dual overlay filesystems.
+The loader script now supports dual firmware slots, complete with dual overlay filesystems, alongside an independent Recovery OS on `rsvd_5`.
+For detailed architecture breakdown, dual slot comparison, and flowcharts, see `DYNAMIC_UBOOT_GUIDE.md`.
 However, official OpenWrt does not yet support A/B dual firmware sysupgrades for this device.
 This support could be added later, but it would require an OpenWrt version newer than 25.12 series.
 
@@ -73,8 +78,8 @@ Now you can:
 
 The configuration for TFTP boot is as follows:
 
-- Router IP: `192.168.1.1`
-- Server IP: `192.168.1.2`
+- Router IP: `1.2.3.1`
+- Server IP: `1.2.3.4`
 - Netmask: `255.255.255.0`
 - Filename: `recovery.img`
 
@@ -101,13 +106,13 @@ Follow these installation steps:
    Or you can copy the script to the router, `chmod +x` it, and execute it.)
    Follow the prompts and the U-Boot configuration should be installed.
 5. Type `reboot`, then interrupt the boot sequence early when you see the prompt "Hit Ctrl+C for shell..."; you have 2 seconds for that. You are now in the U-Boot shell.
-6. Use a device (eg: your PC) that has a wired Ethernet connection. Set its IP address to `192.168.1.2` and connect it to a LAN port on the router.
+6. Use a device (eg: your PC) that has a wired Ethernet connection. Set its IP address to `1.2.3.4` and connect it to a LAN port on the router.
 7. Run a TFTP server on it. Host an OpenWrt initramfs image on the server, naming it `recovery.img`.
 8. Type `run boot_write_recovery_from_tftp` on the serial console to have the router download the recovery OS and write it to the recovery partition.
    You should see the message "WILL WRITE RECOVERY IN 30s..." if the download succeeded; just wait for the script to finish.
 9. Reboot the router. You should see it failing to boot the main OS, then falling back to the recovery OS and succeeding.
    (If the recovery OS is correctly installed, you should not see it attempting a TFTP boot.)
-   With the recovery OS running, use your browser to access LuCI at `http://192.168.1.1/`.
+   With the recovery OS running, use your browser to access LuCI at `http://1.2.3.1/`.
    Go to `System`/`Backup / Flash Firmware` and hit `Flash image...` to flash an OpenWrt sysupgrade image as the main OS. Choose to wipe settings during the flash.
 10. Reboot the router and verify that it boots the main OS successfully.
 
