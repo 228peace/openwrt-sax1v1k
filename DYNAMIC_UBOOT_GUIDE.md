@@ -310,26 +310,13 @@ fi
 
 ---
 
-## 🐛 故障排除與除錯指南 (Troubleshooting)
+## 🐛 實務常見疑問與操作排除 (Troubleshooting & Tips)
 
-### 1. 長按 RESET 鍵出現 `## Error: could not switch active boot slot`
-* **原因**：初次套用或出廠狀態下，U-Boot 環境變數中尚未設定 `boot_active_slot` 初始值（或變數為空），導致舊版條件判斷 `test "$boot_active_slot" = 1 ... elif test "$boot_active_slot" = 0 ...` 跳入 `else false` 失敗。
-* **解法**：在 OpenWrt SSH 終端機內執行以下指令更新為強固邏輯：
-  ```bash
-  fw_setenv boot_active_slot '0'
-  fw_setenv boot_switch_active_slot_ram 'if test "$boot_active_slot" = 1; then setenv boot_active_slot 0; else setenv boot_active_slot 1; fi'
-  ```
-
-### 2. 在 Recovery OS 進行 Web Upgrade 後，開機依然顯示 `ERROR: can't get kernel image!` 並退回 Recovery
-* **原因解析**：
-  1. OpenWrt 原生的 Web Upgrade (`sysupgrade`) 預設升級寫入標的為 **Slot 0 (`p18` HLOS + `p20` rootfs)**。
-  2. 若當前 U-Boot 的活躍槽位已被切換為 **Slot 1 (`boot_active_slot=1`)**，升級完成重啟後，U-Boot 仍會嘗試去讀取尚未被寫入的 Slot 1 (`0xCA22`)，因而讀到空白區塊失敗並自動降級退回 Recovery。
-* **解法**：
-  * **快速對策**：斷電插電，**按住 Reset 鈕 2~3 秒至藍燈恆亮放開後，長按 3 秒** 將活躍槽位切回 **Slot 0**，即可直接順利開入剛升級完畢的正式系統。
-  * **雙槽同步對策**：開入 Slot 0 系統後，執行 [`SKILL.md`](SKILL.md#10-雙槽-ab-自動判斷安全備份-sop) 的備份指令，將 Slot 0 內容複製到 Slot 1：
-    ```bash
-    dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19 && dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync
-    ```
+### 1. 在 Recovery OS 進行 Web 升級後，重啟依然讀取 Slot 1 失敗並退回 Recovery
+* **真實情境**：若先前手動將活躍槽位切換為 **Slot 1 (`boot_active_slot=1`)**，隨後在 Recovery OS 執行 Web Upgrade（預設刷寫至 Slot 0），重啟後 U-Boot 仍會依照設定去讀取尚未刷寫的 Slot 1 (`0xCA22`)，導致開機失敗並再次降級開回 Recovery。
+* **快速對策**：
+  * **按鍵快速切回**：路由器斷電插電，**按住 Reset 鈕 2~3 秒至藍燈恆亮放開，隨後長按 3 秒** 將活躍槽位切回 **Slot 0**，即可直接開入剛升級好的全新正式系統。
+  * **雙槽同步**：進入 Slot 0 驗證系統無誤後，執行 `dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19 && dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync` 備份至 Slot 1。
 
 ---
 
