@@ -155,6 +155,8 @@ reset
 ---
 
 ## 📄 專案文件索引
+* `WORKFLOW.md` - 原廠設備改造至自訂 FW 標準 6 階段工作流程規範 Protocol
 * `configure-uboot-dynamic.sh` - 動態解析與 POSIX 相容之 U-Boot 配置主腳本
+* `scan-uboot-hack.py` - 0.01 秒自動特徵碼逆向掃描工具
 * `DYNAMIC_UBOOT_GUIDE.md` - 詳細功能、BOOT Stages 機制與硬體按鈕操作說明
 * `UBOOT_REVERSE_ENGINEERING_GUIDE.md` - 高通 U-Boot 逆向工程與 Memory Hack 位址提取指南
