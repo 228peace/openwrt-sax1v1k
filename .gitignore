@@ -1,0 +1,4 @@
+# Ignore binary image files
+*.itb
+*.bin
+*.img
