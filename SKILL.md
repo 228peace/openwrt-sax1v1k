@@ -108,6 +108,15 @@ fi
 2. 在 `IPQ807x#` 貼上：`setenv ipaddr 1.2.3.1; setenv serverip 1.2.3.4; tftpboot 44000000 <檔案名稱.itb> && bootm 44000000`
 3. 開入 OpenWrt 臨時系統後，電腦上傳腳本 `scp configure-uboot-dynamic.sh root@<ROUTER_IP>:/tmp/` (官方 Initramfs 預設 IP 為 `192.168.1.1`)，進入 SSH 執行 `chmod +x /tmp/configure-uboot-dynamic.sh && /tmp/configure-uboot-dynamic.sh`
 
+### 16. Recovery OS 下 Web Upgrade 的升級機制與切槽對策
+* **機制原理解析**：OpenWrt 原生 `sysupgrade` 預設只會升級寫入 **Slot 0 (`p18` / `p20`)**。若當前 U-Boot 活躍槽位為 **Slot 1 (`boot_active_slot=1`)**，Web 升級成功後重啟，U-Boot 仍會嘗試去讀取未寫入的 Slot 1 導致開機失敗，並再度降級進入 Recovery。
+* **對策 A**：長按 Reset 3 秒切回 Slot 0，即可直接開入剛 Web 升級好的全新正式系統。
+* **對策 B**：開入 Slot 0 系統後，執行 `dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19 && dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync` 進行雙槽同步。
+
+### 17. A/B 雙槽安全營運哲學 (先驗證，再 dd 同步)
+* **單槽升級防保護**：Web Upgrade 不自動同時刷寫兩槽，避免新韌體 Bug 造成雙槽連鎖死磚。
+* **標準營運 SOP**：Web 升級 ──> 開入 Slot 0 驗證系統/網路 100% 正常 ──> 執行 `dd` 一鍵指令備份至 Slot 1。確保 Slot 1 永遠留存經驗證合格的備用系統。
+
 ---
 
 ## 🛠️ 完全還原 U-Boot 至原廠狀態 SOP (Factory Restoration)

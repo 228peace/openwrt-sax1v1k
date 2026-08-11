@@ -289,20 +289,22 @@ grep -H "$(cat /proc/cmdline | grep -o 'PARTUUID=[^ ]*' | cut -d= -f2)" /sys/cla
 fw_printenv boot_active_slot
 ```
 
-#### 🛡️ 步驟 2：執行自動判斷備份指令
-不論目前在 Slot 0 或 Slot 1，執行以下腳本自動將「當前活躍系統」複製備份至「備用槽位」：
+#### 💡 A/B 槽安全維護理念 (為什麼不自動寫入兩槽？)
+A/B 雙系統的核心價值在於**「安全備援」**：
+1. **防止新韌體死磚**：Web Upgrade 時僅更新 Slot 0，確保 Slot 1（或備份槽）留有已知穩定的舊版系統。
+2. **驗證後再備份**：開入 Slot 0 確認新升級的韌體運作 100% 正常後，再手動/腳本將 Slot 0 複製給 Slot 1。這樣可確保兩槽隨時都處於可成功開機的高可用狀態！
+
+#### 🔹 雙槽自動判定備份指令
+預設情況下，`sysupgrade` 僅會更新 Slot 0。在 Slot 0 驗證新系統無誤後，請在 SSH 執行以下自動判定備份指令：
 
 ```bash
 ACTIVE="$( fw_printenv boot_active_slot 2>/dev/null | cut -d= -f2 )"
-
 if [ "$ACTIVE" = "1" ]; then
-  echo "## 目前處於 Slot 1，正在自動複製 Slot 1 -> Slot 0..."
-  dd if=/dev/mmcblk0p19 of=/dev/mmcblk0p18
-  dd if=/dev/mmcblk0p22 of=/dev/mmcblk0p20 && sync
+  echo "Active slot is 1. Backing up Slot 1 -> Slot 0..."
+  dd if=/dev/mmcblk0p19 of=/dev/mmcblk0p18 && dd if=/dev/mmcblk0p22 of=/dev/mmcblk0p20 && sync
 else
-  echo "## 目前處於 Slot 0 (預設)，正在自動複製 Slot 0 -> Slot 1..."
-  dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19
-  dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync
+  echo "Active slot is 0. Backing up Slot 0 -> Slot 1..."
+  dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19 && dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync
 fi
 ```
 
@@ -317,6 +319,17 @@ fi
   fw_setenv boot_active_slot '0'
   fw_setenv boot_switch_active_slot_ram 'if test "$boot_active_slot" = 1; then setenv boot_active_slot 0; else setenv boot_active_slot 1; fi'
   ```
+
+### 2. 在 Recovery OS 進行 Web Upgrade 後，開機依然顯示 `ERROR: can't get kernel image!` 並退回 Recovery
+* **原因解析**：
+  1. OpenWrt 原生的 Web Upgrade (`sysupgrade`) 預設升級寫入標的為 **Slot 0 (`p18` HLOS + `p20` rootfs)**。
+  2. 若當前 U-Boot 的活躍槽位已被切換為 **Slot 1 (`boot_active_slot=1`)**，升級完成重啟後，U-Boot 仍會嘗試去讀取尚未被寫入的 Slot 1 (`0xCA22`)，因而讀到空白區塊失敗並自動降級退回 Recovery。
+* **解法**：
+  * **快速對策**：斷電插電，**按住 Reset 鈕 2~3 秒至藍燈恆亮放開後，長按 3 秒** 將活躍槽位切回 **Slot 0**，即可直接順利開入剛升級完畢的正式系統。
+  * **雙槽同步對策**：開入 Slot 0 系統後，執行 [`SKILL.md`](SKILL.md#10-雙槽-ab-自動判斷安全備份-sop) 的備份指令，將 Slot 0 內容複製到 Slot 1：
+    ```bash
+    dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19 && dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync
+    ```
 
 ---
 
