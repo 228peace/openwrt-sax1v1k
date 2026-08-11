@@ -125,6 +125,15 @@ fi
 * 一鍵自動跳轉另一個 Slot 重啟：
   `ACTIVE="$( fw_printenv boot_active_slot 2>/dev/null | cut -d= -f2 )"; if [ "$ACTIVE" = "1" ]; then fw_setenv boot_active_slot 0 && reboot; else fw_setenv boot_active_slot 1 && reboot; fi`
 
+### 19. OpenWrt 無 sftp-server 時之 SCP 上傳傳輸 SOP (`scp -O`)
+* **問題**：提示 `ash: /usr/libexec/sftp-server: not found` 傳輸失敗。
+* **原因**：OpenWrt 精簡韌體無 SFTP 服務，新版 SSH client 預設走 SFTP。
+* **對策**：加上 `-O` 參數強制切換回傳統 SCP 傳輸協定：`scp -O file.sh root@<ROUTER_IP>:/tmp/`。
+
+### 20. U-Boot Jul 02 2021 (variant f032) 實戰逆向成功經驗
+* **MD5 雜湊**：`f0320e776cfb0b5509ca9722eda42213`
+* **掃描位址**：`mw 4a612880 0a000007 1; mw 4a614034 0a000006 1; go 4a9647cc` (實測與 `scan-uboot-hack.py` 100% 驗證相符)。
+
 ---
 
 ## 🛠️ 完全還原 U-Boot 至原廠狀態 SOP (Factory Restoration)
