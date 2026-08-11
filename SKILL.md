@@ -134,6 +134,10 @@ fi
 * **MD5 雜湊**：`f0320e776cfb0b5509ca9722eda42213`
 * **掃描位址**：`mw 4a612880 0a000007 1; mw 4a614034 0a000006 1; go 4a9647cc` (實測與 `scan-uboot-hack.py` 100% 驗證相符)。
 
+### 21. 動態 GPT 容錯：無 rsvd_5 設備之自動降級機制
+* **實測現象**：在部分無 `rsvd_5` GPT 標籤之設備上，提示 `rsvd_5 (recovery) partition NOT found`。
+* **腳本自動保護**：腳本自動將 `boot_recovery` 與 `boot_stage4` 設為 `#nop`（空指令），確保開機鏈流程不會因缺失 Recovery 分割區而異常卡死。
+
 ---
 
 ## 🛠️ 完全還原 U-Boot 至原廠狀態 SOP (Factory Restoration)
