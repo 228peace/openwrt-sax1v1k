@@ -134,9 +134,11 @@ fi
 * **MD5 雜湊**：`f0320e776cfb0b5509ca9722eda42213`
 * **掃描位址**：`mw 4a612880 0a000007 1; mw 4a614034 0a000006 1; go 4a9647cc` (實測與 `scan-uboot-hack.py` 100% 驗證相符)。
 
-### 21. 動態 GPT 容錯：無 rsvd_5 設備之自動降級機制
-* **實測現象**：在部分無 `rsvd_5` GPT 標籤之設備上，提示 `rsvd_5 (recovery) partition NOT found`。
-* **腳本自動保護**：腳本自動將 `boot_recovery` 與 `boot_stage4` 設為 `#nop`（空指令），確保開機鏈流程不會因缺失 Recovery 分割區而異常卡死。
+### 21. 動態 GPT 容錯：無 rsvd_5 設備之自動降級與 A/B + TFTP 救磚機制
+* **實測現象**：部分出廠批次 GPT 僅 32 個分割區（無 `mmcblk0p36` / `rsvd_5`），寫入 `p36` 會提示 `No space left on device`。
+* **雙重安全保護**：
+  1. 腳本自動偵測無 `rsvd_5` 後，會自動將 `boot_recovery` 與 `boot_stage4` 降級設為 `#nop`。
+  2. 該類設備以 **A/B 雙槽互備 (`p18/p20` ↔ `p19/p22`)** 為核心防護；若雙槽皆損壞則由 **U-Boot TFTP 網路載入 `.itb`** 完成終極救磚！
 
 ---
 
