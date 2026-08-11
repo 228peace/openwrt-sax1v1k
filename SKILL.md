@@ -114,8 +114,16 @@ fi
 * **對策 B**：開入 Slot 0 系統後，執行 `dd if=/dev/mmcblk0p18 of=/dev/mmcblk0p19 && dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p22 && sync` 進行雙槽同步。
 
 ### 17. A/B 雙槽安全營運哲學 (先驗證，再 dd 同步)
-* **單槽升級防保護**：Web Upgrade 不自動同時刷寫兩槽，避免新韌體 Bug 造成雙槽連鎖死磚。
+* **單槽升級防保護**：Web Upgrade 不自動同時刷寫兩槽，避免新韌體 Bug 造成雙槽死磚。
 * **標準營運 SOP**：Web 升級 ──> 開入 Slot 0 驗證系統/網路 100% 正常 ──> 執行 `dd` 一鍵指令備份至 Slot 1。確保 Slot 1 永遠留存經驗證合格的備用系統。
+
+### 18. 透過 SSH CLI 指令手動切換開機 Slot 並重啟 SOP
+在 OpenWrt SSH 終端機內：
+* 查看當前槽位：`fw_printenv boot_active_slot`
+* 切換 Slot 1 並重啟：`fw_setenv boot_active_slot 1 && reboot`
+* 切換 Slot 0 並重啟：`fw_setenv boot_active_slot 0 && reboot`
+* 一鍵自動跳轉另一個 Slot 重啟：
+  `ACTIVE="$( fw_printenv boot_active_slot 2>/dev/null | cut -d= -f2 )"; if [ "$ACTIVE" = "1" ]; then fw_setenv boot_active_slot 0 && reboot; else fw_setenv boot_active_slot 1 && reboot; fi`
 
 ---
 

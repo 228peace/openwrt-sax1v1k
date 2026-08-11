@@ -271,18 +271,46 @@ MMC read: dev # 0, block # 5217826, count 65536 ... 65536 blocks read: OK
      Compression:  gzip compressed
 ```
 
-### 5. 雙系統 (A/B 槽) 維護與同步 SOP (智慧防錯版)
+---
 
-預設情況下，`sysupgrade` 僅會更新當前運行的槽位。在複製備份前，請務必確認當前 Active Slot：
+## 5. 雙系統 (A/B 槽) 維護與 CLI 指令切換 SOP
 
-#### 🔍 步驟 1：確認當前活躍槽位 (Active Slot)
-在原廠或預設引導下，若 `cmdline` 顯示 `PARTUUID` 或 `/rom` 顯示 `/dev/root`，可用以下指令精確查出實體分區：
+### 💻 透過 SSH 指令手動切換開機槽位 (CLI Slot Switch)
 
+除了在開機時長按 Reset 按鈕切換槽位外，您也可以直接在路由器的 OpenWrt SSH 終端機內使用 CLI 指令手動指定切換開機槽位並重啟：
+
+1. **查看當前活躍槽位**：
+   ```bash
+   fw_printenv boot_active_slot
+   ```
+2. **手動指定切換至 Slot 1 開機並重啟**：
+   ```bash
+   fw_setenv boot_active_slot 1 && reboot
+   ```
+3. **手動指定切換至 Slot 0 開機並重啟**：
+   ```bash
+   fw_setenv boot_active_slot 0 && reboot
+   ```
+4. **一鍵自動切換至「另一個槽位」並重啟**：
+   ```bash
+   ACTIVE="$( fw_printenv boot_active_slot 2>/dev/null | cut -d= -f2 )"
+   if [ "$ACTIVE" = "1" ]; then
+     echo "Switching from Slot 1 -> Slot 0..."
+     fw_setenv boot_active_slot 0 && reboot
+   else
+     echo "Switching from Slot 0 -> Slot 1..."
+     fw_setenv boot_active_slot 1 && reboot
+   fi
+   ```
+
+---
+
+#### 🔍 槽位確認與 PARTUUID 反查指令
 ```bash
-# 1. 查尋當前 PARTUUID 對應的實體分區 (最萬能 ⭐️)
+# 1. 查詢當前 PARTUUID 對應的實體分區 (最萬能 ⭐️)
 blkid
 
-# 2. 或是比對當前 PARTUUID 標籤
+# 2. 比對當前 PARTUUID 標籤
 grep -H "$(cat /proc/cmdline | grep -o 'PARTUUID=[^ ]*' | cut -d= -f2)" /sys/class/block/mmcblk0p*/uevent
 
 # 3. 查看 U-Boot 活躍環境變數 (套用動態腳本後)
