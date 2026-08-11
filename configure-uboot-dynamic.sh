@@ -69,6 +69,7 @@ get_uboot_version_string() {
 # 判斷 Hash 是否為已知支援版本的輔助函式
 is_known_uboot_hash() {
   case "$1" in
+    f0320e776cfb0b5509ca9722eda42213|\
     714b3fce2e5fea12cb58bfd0721d262d|\
     f3066582267c857e24097b4aecd3e9a1|\
     ab709449c98f89cfa57e119b0f37b388|\
@@ -197,6 +198,11 @@ uboot_label=""
 uboot_hack=""
 uboot_net_init=""
 case "$uboot_hash" in
+  f0320e776cfb0b5509ca9722eda42213)
+    uboot_label="1.4.1 [spf11.4_cs] Jul 02 2021 (variant f032)"
+    uboot_hack="mw 4a612880 0a000007 1; mw 4a614034 0a000006 1"
+    uboot_net_init="go 4a9647cc"
+    ;;
   714b3fce2e5fea12cb58bfd0721d262d)
     uboot_label="1.3.3 [spf11.1_csu2] Jan 27 2021 (variant 714b)"
     uboot_hack="mw 4a612880 0a000007 1; mw 4a613ebc 0a000006 1"
