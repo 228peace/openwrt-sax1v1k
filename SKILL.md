@@ -140,6 +140,42 @@ fi
   1. 腳本自動偵測無 `rsvd_5` 後，會自動將 `boot_recovery` 與 `boot_stage4` 降級設為 `#nop`。
   2. 該類設備以 **A/B 雙槽互備 (`p18/p20` ↔ `p19/p22`)** 為核心防護；若雙槽皆損壞則由 **U-Boot TFTP 網路載入 `.itb`** 完成終極救磚！
 
+### 22. U-Boot Jul 31 2020 (variant 63fc) 實戰逆向成功經驗
+* **MD5 雜湊**：`63fcd6d91146ca0d689fbe9b91d34ae3`
+* **版本標籤**：`U-Boot 1.2.2 [spf11.1_cs] (Jul 31 2020 - 04:04:20 +0000)`
+* **掃描位址**：`mw 4a612880 0a000007 1; mw 4a613ec0 0a000006 1; go 4a9647cc` (經實機提取二進位掃描並成功寫入驗證)。
+
+### 23. 唯讀 rootfs / Initramfs 環境下 fw_env.config 容錯處理
+* **現象**：在 Initramfs 或未掛載 overlay 的 SquashFS 系統中執行腳本時，寫入 `/etc/fw_env.config` 會跳出 `Read-only file system` 錯誤。
+* **解法**：在腳本開頭加入自動偵測與降級機制，若 `/etc/` 唯讀則寫入 `/tmp/fw_env.config`，並定義 `fw_printenv` / `fw_setenv` 函式包裝加入 `-c "$FW_ENV_CONFIG"` 參數。
+
+### 24. 異構雙韌體環境下開機槽位跨韌體判定與 fw_env.config 自動補全 SOP
+* **現象**：當 Slot 0 與 Slot 1 刷寫不同版本的韌體時，某些第三方/官方純淨版韌體可能未內建 `/etc/fw_env.config` 或未安裝 `u-boot-envtools`，導致無法使用 `fw_printenv boot_active_slot` 查看目前開機槽位。
+* **優化對策 A（開機自動配置）**：
+  在韌體內建立 `/etc/uci-defaults/30-fw-env-config` 自動補全：
+  ```sh
+  [ -f /etc/fw_env.config ] || echo "/dev/mmcblk0p14 0x0 0x40000 0x40000 1" > /etc/fw_env.config
+  ```
+* **優化對策 B（免依賴 fw_printenv 之多層級槽位探測函式）**：
+  ```sh
+  get_running_slot() {
+    # 1. 優先從 /proc/cmdline 判定 (最萬能)
+    case "$(cat /proc/cmdline 2>/dev/null)" in
+      *mmcblk0p20*|*rootfs_data*)   echo "0"; return 0 ;;
+      *mmcblk0p22*|*rootfs_data_1*) echo "1"; return 0 ;;
+    esac
+    # 2. 次選從 Overlay 掛載磁區判定
+    if mount | grep -q "mmcblk0p24"; then echo "0"; return 0; fi
+    if mount | grep -q "mmcblk0p25"; then echo "1"; return 0; fi
+    # 3. 備選直接讀取 eMMC 分區 14 字串 (免工具)
+    local s="$(strings -n5 /dev/mmcblk0p14 2>/dev/null | grep "^boot_active_slot=" | cut -d= -f2)"
+    [ -n "$s" ] && { echo "$s"; return 0; }
+    echo "0"
+  }
+  ```
+* **優化對策 C（純硬體切槽保底）**：
+  即使某韌體系統完全死鎖或無 CLI 工具，斷電按住 Reset 插電 2~3 秒至藍燈恆亮放開後長按 3 秒，U-Boot 底層直接完成切槽並開機。
+
 ---
 
 ## 🛠️ 完全還原 U-Boot 至原廠狀態 SOP (Factory Restoration)

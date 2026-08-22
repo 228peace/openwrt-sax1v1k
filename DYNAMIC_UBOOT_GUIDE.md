@@ -20,7 +20,8 @@
 | **PARTLABEL 相容性** | 僅相容預設標準標籤 | **完全相容原廠帶有 `0:` 前綴的標籤**（如 `0:HLOS`, `0:HLOS_1`） |
 | **U-Boot 雙槽救援** | 若現有 Slot 為未知 Hash 則中斷退出 | **智慧救援機制**：若備用 Slot 為已知 Hash，自動提示複製同步 |
 | **Shell 相容性** | 部分 Bash 擴充語法 | **100% 相容 OpenWrt Busybox ash / POSIX sh** |
-| **U-Boot Hack 校驗** | 依據 U-Boot MD5 Hash 匹配記憶體 Patch 位址 | **完整保留**，確保記憶體暫存器修補 100% 精確 |
+| **唯讀系統容錯** | 依賴 `/etc/fw_env.config` 寫入 | **自動降級至 `/tmp/fw_env.config`**，支援 Initramfs / 唯讀 SquashFS |
+| **U-Boot Hack 校驗** | 依據 U-Boot MD5 Hash 匹配記憶體 Patch 位址 | **完整保留並持續擴充**（收錄 `63fc`、`f032`、`714b` 等 9 種版本） |
 
 ---
 
@@ -305,15 +306,23 @@ MMC read: dev # 0, block # 5217826, count 65536 ... 65536 blocks read: OK
 
 ---
 
-#### 🔍 槽位確認與 PARTUUID 反查指令
+#### 🔍 槽位確認與多層級反查策略 (Multi-Tier Slot Detection)
+
+若當前系統或第三方純淨韌體**未安裝 `u-boot-envtools` 或缺少 `/etc/fw_env.config`**，可透過以下三種方式查詢：
+
 ```bash
-# 1. 查詢當前 PARTUUID 對應的實體分區 (最萬能 ⭐️)
-blkid
+# 方法 1：透過 Kernel cmdline 判定當前活躍槽位 (最萬能 ⭐️)
+case "$(cat /proc/cmdline 2>/dev/null)" in
+  *mmcblk0p20*|*rootfs_data*)   echo "Active Slot: 0" ;;
+  *mmcblk0p22*|*rootfs_data_1*) echo "Active Slot: 1" ;;
+  *) echo "Unknown slot" ;;
+esac
 
-# 2. 比對當前 PARTUUID 標籤
-grep -H "$(cat /proc/cmdline | grep -o 'PARTUUID=[^ ]*' | cut -d= -f2)" /sys/class/block/mmcblk0p*/uevent
+# 方法 2：直接讀取 eMMC 分區 14 字串 (免安裝任何工具)
+strings -n5 /dev/mmcblk0p14 2>/dev/null | grep "^boot_active_slot="
 
-# 3. 查看 U-Boot 活躍環境變數 (套用動態腳本後)
+# 方法 3：自動補全 fw_env.config 設定檔 (補齊後即可直接使用 fw_printenv)
+[ -f /etc/fw_env.config ] || echo "/dev/mmcblk0p14 0x0 0x40000 0x40000 1" > /etc/fw_env.config
 fw_printenv boot_active_slot
 ```
 

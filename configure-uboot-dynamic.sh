@@ -69,6 +69,7 @@ get_uboot_version_string() {
 # 判斷 Hash 是否為已知支援版本的輔助函式
 is_known_uboot_hash() {
   case "$1" in
+    63fcd6d91146ca0d689fbe9b91d34ae3|\
     f0320e776cfb0b5509ca9722eda42213|\
     714b3fce2e5fea12cb58bfd0721d262d|\
     f3066582267c857e24097b4aecd3e9a1|\
@@ -88,6 +89,23 @@ configure_uboot() {
 echo
 echo "starting dynamic U-Boot configuration script..."
 echo
+
+# 0. 確保 fw_env 設定檔存在 (支援唯讀 rootfs / initramfs 環境)
+FW_ENV_CONFIG="/etc/fw_env.config"
+if [ ! -f "$FW_ENV_CONFIG" ]; then
+  if ! echo "/dev/mmcblk0p14 0x0 0x40000 0x40000 1" > /etc/fw_env.config 2>/dev/null; then
+    FW_ENV_CONFIG="/tmp/fw_env.config"
+    echo "/dev/mmcblk0p14 0x0 0x40000 0x40000 1" > "$FW_ENV_CONFIG"
+  fi
+fi
+
+fw_printenv() {
+  command fw_printenv -c "$FW_ENV_CONFIG" "$@"
+}
+
+fw_setenv() {
+  command fw_setenv -c "$FW_ENV_CONFIG" "$@"
+}
 
 # 1. 動態解析 GPT 分割區標籤與起始扇區 (Dynamic Label & Sector Resolution)
 
@@ -198,6 +216,11 @@ uboot_label=""
 uboot_hack=""
 uboot_net_init=""
 case "$uboot_hash" in
+  63fcd6d91146ca0d689fbe9b91d34ae3)
+    uboot_label="1.2.2 [spf11.1_cs] Jul 31 2020 (variant 63fc)"
+    uboot_hack="mw 4a612880 0a000007 1; mw 4a613ec0 0a000006 1"
+    uboot_net_init="go 4a9647cc"
+    ;;
   f0320e776cfb0b5509ca9722eda42213)
     uboot_label="1.4.1 [spf11.4_cs] Jul 02 2021 (variant f032)"
     uboot_hack="mw 4a612880 0a000007 1; mw 4a614034 0a000006 1"
@@ -263,10 +286,6 @@ fi
 # 4. 配置 U-Boot 環境變數 (Configure U-Boot environment)
 
 pause "about to configure U-Boot environment"
-
-if [ ! -f /etc/fw_env.config ]; then
-  echo "/dev/mmcblk0p14 0x0 0x40000 0x40000 1" > /etc/fw_env.config
-fi
 
 ## Boot stages
 fw_setenv boot_stage1 'echo "Hit Ctrl+C for shell..."; sleep 2 || exit; run boot_stage1_ok'

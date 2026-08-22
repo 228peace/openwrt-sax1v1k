@@ -105,7 +105,40 @@ for match in re.finditer(b"\x07\x00\x00\x0a", data):
 
 ---
 
+## 🏆 實戰逆向成功案例紀錄 (Case Studies)
+
+### 案例 1：U-Boot Jul 31 2020 (variant 63fc)
+* **MD5 雜湊**：`63fcd6d91146ca0d689fbe9b91d34ae3`
+* **版本字串**：`U-Boot 1.2.2 [spf11.1_cs] (Jul 31 2020 - 04:04:20 +0000)`
+* **掃描結果**：
+  * Patch 1：`0x4A612880` (`0a000007`)
+  * Patch 2：`0x4A613EC0` (`0a000006`)
+  * Network Init：`0x4A9647CC` (`go 4a9647cc`)
+* **登錄碼**：
+  ```sh
+  63fcd6d91146ca0d689fbe9b91d34ae3)
+    uboot_label="1.2.2 [spf11.1_cs] Jul 31 2020 (variant 63fc)"
+    uboot_hack="mw 4a612880 0a000007 1; mw 4a613ec0 0a000006 1"
+    uboot_net_init="go 4a9647cc"
+    ;;
+  ```
+
+### 案例 2：U-Boot Jul 02 2021 (variant f032)
+* **MD5 雜湊**：`f0320e776cfb0b5509ca9722eda42213`
+* **版本字串**：`U-Boot 1.4.1 [spf11.4_cs] (Jul 02 2021)`
+* **登錄碼**：
+  ```sh
+  f0320e776cfb0b5509ca9722eda42213)
+    uboot_label="1.4.1 [spf11.4_cs] Jul 02 2021 (variant f032)"
+    uboot_hack="mw 4a612880 0a000007 1; mw 4a614034 0a000006 1"
+    uboot_net_init="go 4a9647cc"
+    ;;
+  ```
+
+---
+
 ## 📄 關聯文件索引
 * [`configure-uboot-dynamic.sh`](configure-uboot-dynamic.sh) - 動態解析與 U-Boot 配置主腳本
 * [`DYNAMIC_UBOOT_GUIDE.md`](DYNAMIC_UBOOT_GUIDE.md) - 詳細功能與按鈕選單指南
 * [`SKILL.md`](SKILL.md) - 專案維護經驗手冊
+
